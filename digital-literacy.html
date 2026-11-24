@@ -388,8 +388,12 @@ h1,h2,h3,p{margin:0}
     <p id="setupStat">연결 상태를 확인하고 있어요…</p>
     <div class="row">
       <button class="btn btn-primary press" id="testPrint">테스트 인쇄</button>
+      <button class="btn btn-primary press" id="samplePrint">예시 결과 인쇄</button>
       <button class="btn btn-secondary press" id="setupRetry">다시 확인</button>
     </div>
+    <span class="caption">영수증 QR 인쇄 방식</span>
+    <div class="seg" id="qrSeg" role="group" aria-label="QR 인쇄 방식"></div>
+    <p class="helper">결과 영수증이 안 나오면 ‘프린터 내장’ → ‘인쇄 안 함’ 순서로 바꿔 예시 결과 인쇄를 해 보세요.</p>
     <button class="btn btn-outline press" id="setupClose">닫기</button>
   </div>
 </div>
@@ -645,15 +649,20 @@ function receiptBytes(test){
     rule();bold(1);size(0x01);T(lr('종합 평균',`${r.total.toFixed(1)} / 5.0  ${LV[lv]}`));size(0);bold(0);
     T(lr('강점',r.flat?'고른 분포':r.top.join(', ')));T(lr('성장 필요',r.flat?'-':r.low.join(', ')));T('');
     wrap(OVERALL[lv]).forEach(T);rule();
-    if(window.qrcode){ // QR은 모든 ESC/POS 프린터가 지원하는 래스터 이미지(GS v 0)로 보냄
-      const q=qrcode(0,'L');q.addData(location.href.split('#')[0]+'#'+toHash());q.make();
+    const mode=qrMode(),url=location.href.split('#')[0]+'#'+toHash();
+    if(mode==='native'){ // 프린터 내장 QR 명령(GS ( k) — 데이터가 작음. 지원하지 않는 프린터도 있음
+      const d=[...url].map(c=>c.charCodeAt(0)&255),len=d.length+3,k=(...b)=>cmd(0x1D,0x28,0x6B,...b);
+      align(1);T('');k(4,0,0x31,0x41,0x32,0);k(3,0,0x31,0x43,6);k(3,0,0x31,0x45,0x30);
+      k(len&255,len>>8,0x31,0x50,0x30,...d);k(3,0,0x31,0x51,0x30);T('');
+    }else if(mode==='img'&&window.qrcode){ // 래스터 이미지(GS v 0)로 보냄
+      const q=qrcode(0,'L');q.addData(url);q.make();
       const n=q.getModuleCount(),s=Math.max(3,Math.min(8,Math.floor(336/n))),w=n*s,off=DOTS-w>>1,bw=Math.ceil((off+w)/8);
-      T('');cmd(0x1D,0x76,0x30,0,bw&255,bw>>8,w&255,w>>8);
+      align(0);T('');cmd(0x1D,0x76,0x30,0,bw&255,bw>>8,w&255,w>>8);
       for(let y=0;y<w;y++){const row=new Uint8Array(bw),qy=y/s|0;
         for(let x=0;x<w;x++)if(q.isDark(qy,x/s|0)){const p=off+x;row[p>>3]|=0x80>>(p&7);}
         o.push(...row);}
-      align(1);T('');T('QR을 스캔하면 결과지(PDF, PNG)를');T('저장할 수 있어요');
     }
+    if(mode!=='off'){align(1);T('');T('QR을 스캔하면 결과지(PDF, PNG)를');T('저장할 수 있어요');}
     align(1);T('');T('7개 영역 38문항 · 5점 척도');T('이승민·강두봉(2021) 검사 도구 기반');
   }
   cmd(0x1B,0x64,4,0x1D,0x56,0x42,0); // 4줄 올리고 자름
@@ -664,15 +673,24 @@ function wsOpen(addr){return new Promise((ok,no)=>{let ws;try{ws=new WebSocket(a
   ws.onopen=()=>{clearTimeout(t);ok(ws);};ws.onerror=()=>{clearTimeout(t);no(new Error('ws'));};});}
 async function rawbtSocket(){for(const a of RAWBT)try{return await wsOpen(a);}catch(e){}return null;}
 const onTablet=()=>/Android/i.test(navigator.userAgent)||!!window.fully;
+const QRM={img:'이미지',native:'프린터 내장',off:'인쇄 안 함'};
+function qrMode(){try{const v=localStorage.getItem('dl-qr');return QRM[v]?v:'img';}catch(e){return 'img';}}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let printing=false;
 async function printReceipt(test){
-  if(printing)return;printing=true;setTimeout(()=>printing=false,2500);
-  let bytes;try{bytes=receiptBytes(test);}catch(e){console.error(e);}
-  const ws=bytes&&await rawbtSocket();
-  if(ws){ws.send(bytes.buffer);setTimeout(()=>ws.close(1000),500);toast(test?'테스트 인쇄를 보냈어요':'영수증을 인쇄하고 있어요');}
-  else if(bytes&&onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);location.href='rawbt:base64,'+btoa(s);} // 서버 앱이 꺼져 있으면 RawBT 앱을 직접 호출
-  else if(test)toast('RawBT 서버를 찾지 못했어요');
-  else print();
+  if(printing)return;printing=true;
+  try{
+    const bytes=receiptBytes(test),ws=await rawbtSocket();
+    if(ws){ // 큰 데이터(QR 이미지)가 다 넘어간 뒤 닫아야 RawBT가 끝까지 받음
+      ws.send(bytes.buffer);const t0=Date.now();
+      while(ws.bufferedAmount>0&&Date.now()-t0<8000)await sleep(50);
+      toast(`${test?'테스트 인쇄':'영수증'}을 보냈어요 (${(bytes.length/1024).toFixed(1)}KB)`);
+      await sleep(1500);ws.close(1000);
+    }else if(onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);location.href='rawbt:base64,'+btoa(s);} // 서버 앱이 꺼져 있으면 RawBT 앱을 직접 호출
+    else if(test)toast('RawBT 서버를 찾지 못했어요');
+    else print();
+  }catch(e){console.error(e);toast('인쇄 오류: '+(e&&e.message||e));}
+  finally{setTimeout(()=>printing=false,1000);}
 }
 $('#printBtn').onclick=()=>{openReceipt();printReceipt();};
 $('#doPrint').onclick=()=>printReceipt();
@@ -689,6 +707,14 @@ mark.onpointerup=mark.onpointerleave=mark.onpointercancel=()=>clearTimeout(holdT
 mark.oncontextmenu=e=>e.preventDefault();
 $('#setupRetry').onclick=setupCheck;
 $('#testPrint').onclick=()=>printReceipt(true);
+function renderQrSeg(){const m=qrMode();$('#qrSeg').innerHTML=Object.entries(QRM).map(([k,v])=>`<button class="press" data-q="${k}" aria-pressed="${k===m}">${v}</button>`).join('');}
+$('#qrSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;try{localStorage.setItem('dl-qr',b.dataset.q);}catch(err){}renderQrSeg();};
+renderQrSeg();
+$('#samplePrint').onclick=async()=>{ // 검사를 안 해도 실제 결과와 같은 영수증을 찍어 봄
+  const keep=st,real=st.ans.every(Boolean);
+  if(!real)st={name:'예시학생',school:'E',grade:5,ans:Q.map((_,i)=>(i*7%3)+3),cur:0,date:new Date()};
+  try{await printReceipt();}finally{if(!real)st=keep;}
+};
 $('#setupClose').onclick=()=>$('#setup').hidden=true;
 $('#setup').onclick=e=>{if(e.target.id==='setup')$('#setup').hidden=true;};
 $('#rcptClose').onclick=closeReceipt;
