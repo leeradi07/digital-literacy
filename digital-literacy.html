@@ -394,6 +394,8 @@ h1,h2,h3,p{margin:0}
       <button class="btn btn-primary press" id="samplePrint">예시 결과 인쇄</button>
       <button class="btn btn-secondary press" id="setupRetry">다시 확인</button>
     </div>
+    <span class="caption">전송 방식</span>
+    <div class="seg" id="txSeg" role="group" aria-label="전송 방식"></div>
     <span class="caption">영수증 QR 인쇄 방식</span>
     <div class="seg" id="qrSeg" role="group" aria-label="QR 인쇄 방식"></div>
     <p class="helper">결과 영수증이 안 나오면 ‘프린터 내장’ → ‘인쇄 안 함’ 순서로 바꿔 예시 결과 인쇄를 해 보세요.</p>
@@ -475,7 +477,7 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!
 let snackT;function toast(m){const s=$('#snack');s.textContent=m;s.hidden=false;clearTimeout(snackT);snackT=setTimeout(()=>s.hidden=true,2400);}
 
 /* 시작 화면 */
-const VERSION='11.24-5'; // 고칠 때마다 올림
+const VERSION='11.24-6'; // 고칠 때마다 올림
 $('#ver').textContent=VERSION;
 $('#domlist').innerHTML=D.map(d=>`<li><b>${d.name}</b><span>${d.items.length}문항</span></li>`).join('');
 $('#school').innerHTML=Object.entries(SCHOOL).map(([k,v])=>`<button class="press" data-s="${k}" aria-pressed="${k===st.school}">${v.label}</button>`).join('');
@@ -680,12 +682,14 @@ async function rawbtSocket(){for(const a of RAWBT)try{return await wsOpen(a);}ca
 const onTablet=()=>/Android/i.test(navigator.userAgent)||!!window.fully;
 const QRM={img:'이미지',native:'프린터 내장',off:'인쇄 안 함'};
 function qrMode(){try{const v=localStorage.getItem('dl-qr');return QRM[v]?v:'img';}catch(e){return 'img';}}
+const TXM={ws:'서버 앱 경유',app:'RawBT 앱 직접 호출'};
+function txMode(){try{const v=localStorage.getItem('dl-tx');return TXM[v]?v:'ws';}catch(e){return 'ws';}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let printing=false;
 async function printReceipt(test){
   if(printing)return;printing=true;
   try{
-    const ws=await rawbtSocket();
+    const ws=txMode()==='app'?null:await rawbtSocket();
     // 서버 앱 없이 RawBT 앱을 직접 부를 때는 주소 길이 제한 때문에 큰 QR 이미지가 통째로 버려짐 → 내장 QR(1KB대)로 바꿔 보냄
     const bytes=receiptBytes(test,!ws&&qrMode()==='img'?'native':'');
     if(ws){ // 큰 데이터(QR 이미지)가 다 넘어간 뒤 닫아야 RawBT가 끝까지 받음
@@ -694,7 +698,7 @@ async function printReceipt(test){
       toast(`${test?'테스트 인쇄':'영수증'}을 보냈어요 (${(bytes.length/1024).toFixed(1)}KB)`);
       await sleep(1500);ws.close(1000);
     }else if(onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);
-      toast(`서버 미연결 — RawBT 앱으로 직접 보내요 (${(bytes.length/1024).toFixed(1)}KB)`);location.href='rawbt:base64,'+btoa(s);}
+      toast(`RawBT 앱으로 직접 보내요 (${(bytes.length/1024).toFixed(1)}KB)`);location.href='rawbt:base64,'+btoa(s);}
     else if(test)toast('RawBT 서버를 찾지 못했어요');
     else print();
   }catch(e){console.error(e);toast('인쇄 오류: '+(e&&e.message||e));}
@@ -722,6 +726,9 @@ $('#testPrint').onclick=()=>printReceipt(true);
 function renderQrSeg(){const m=qrMode();$('#qrSeg').innerHTML=Object.entries(QRM).map(([k,v])=>`<button class="press" data-q="${k}" aria-pressed="${k===m}">${v}</button>`).join('');}
 $('#qrSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;try{localStorage.setItem('dl-qr',b.dataset.q);}catch(err){}renderQrSeg();};
 renderQrSeg();
+function renderTxSeg(){const m=txMode();$('#txSeg').innerHTML=Object.entries(TXM).map(([k,v])=>`<button class="press" data-t="${k}" aria-pressed="${k===m}">${v}</button>`).join('');}
+$('#txSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;try{localStorage.setItem('dl-tx',b.dataset.t);}catch(err){}renderTxSeg();};
+renderTxSeg();
 $('#samplePrint').onclick=async()=>{ // 검사를 안 해도 실제 결과와 같은 영수증을 찍어 봄
   const keep=st,real=st.ans.every(Boolean);
   if(!real)st={name:'예시학생',school:'E',grade:5,ans:Q.map((_,i)=>(i*7%3)+3),cur:0,date:new Date()};
