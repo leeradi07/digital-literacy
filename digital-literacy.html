@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>디지털 리터러시 진단</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* SOCAR Frame 2.0 토큰(발췌) — 라이트 모드 전용 */
+@font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2")}
+:root{
+--blue-50:#EBF5FF;--blue-100:#D6EBFF;--blue-200:#99CEFF;--primary:#0078FF;--primary-strong:#0069FF;
+--gray-50:#F9F9FB;--gray-100:#F2F3F8;--gray-200:#E5E8EF;--gray-300:#CBD1DC;--gray-400:#B4BBCB;--gray-500:#99A1B1;--gray-600:#697383;--gray-700:#4A5667;--gray-800:#354153;--gray-1000:#141A24;
+--text-strong:var(--gray-1000);--text-primary:var(--gray-800);--text-secondary:var(--gray-600);--text-tertiary:var(--gray-500);--text-disabled:var(--gray-400);
+--background-regular:var(--gray-100);--border-regular:var(--gray-200);--divider-regular:var(--gray-200);
+--dimmed-regular:rgb(20 26 36 / .44);--pressed-regular:rgb(20 26 36 / .06);--pressed-dark-regular:rgb(0 0 0 / .08);
+--pos-weak:#E6FEF0;--pos:#04CA81;--pos-strong:#00A870;
+--info-weak:#EBF5FF;--info:#0078FF;
+--cau-weak:#FFF8E6;--cau:#FF8800;--cau-strong:#E06A00;
+--shadow-sheet:0 0 20px rgb(0 0 0 / .25);--ease:cubic-bezier(.42,0,.58,1);
+--font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+html{overscroll-behavior:none;touch-action:manipulation}
+body{user-select:none;-webkit-user-select:none;font-family:var(--font-family);color:var(--text-primary);background:var(--background-regular);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;word-break:keep-all;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+input{user-select:text;-webkit-user-select:text}
+button{border:0;background:none;padding:0;cursor:pointer}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+
+/* 눌림 피드백(SOCAR 시그니처) */
+.press{position:relative;overflow:hidden;transition:transform 150ms var(--ease);user-select:none;-webkit-user-select:none}
+.press::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:background 100ms var(--ease)}
+.press:active{transform:scale(.96)}
+.press:active::after{background:var(--pressed-regular)}
+.press:disabled:active{transform:none}.press:disabled:active::after{background:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+.btn{height:56px;padding:0 28px;border-radius:14px;font-size:17px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn-md{height:46px;padding:0 20px;border-radius:12px;font-size:15px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:active::after{background:var(--pressed-dark-regular)}
+.btn-secondary{background:var(--blue-50);color:var(--primary)}
+.btn-outline{background:#fff;box-shadow:inset 0 0 0 1px var(--border-regular);color:var(--text-primary)}
+.btn:disabled{background:var(--gray-100);color:var(--text-disabled);box-shadow:none;cursor:default}
+
+.card{background:#fff;border-radius:16px;padding:24px}
+.caption{font-size:13px;font-weight:600;color:var(--text-secondary)}
+.badge{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.badge.hi{background:var(--pos-weak);color:var(--pos-strong)}
+.badge.mid{background:var(--info-weak);color:var(--info)}
+.badge.lo{background:var(--cau-weak);color:var(--cau-strong)}
+
+/* 상단 바 */
+.appbar{height:64px;background:#fff;border-bottom:1px solid var(--divider-regular);display:flex;align-items:center;gap:12px;padding:0 28px;position:sticky;top:0;z-index:5}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;letter-spacing:-.3px}
+.appbar h1{font-size:18px;font-weight:700;color:var(--text-strong)}
+.appbar .who{margin-left:auto;font-size:15px;color:var(--text-secondary)}
+.appbar .who b{color:var(--text-strong);font-weight:600}
+
+/* 시작 화면 */
+.start{max-width:1180px;margin:0 auto;min-height:calc(100dvh - 64px);display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center;padding:32px 40px}
+.eyebrow{font-size:15px;font-weight:600;color:var(--primary);margin-bottom:10px}
+.intro h1{font-size:40px;line-height:50px;font-weight:700;color:var(--text-strong)}
+.lead{font-size:18px;line-height:28px;margin:14px 0 24px;color:var(--text-primary)}
+.domlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.domlist li{background:#fff;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.domlist li b{font-weight:600;color:var(--text-strong)}
+.domlist li span{color:var(--text-secondary);white-space:nowrap}
+.meta{margin-top:18px;font-size:15px;color:var(--text-secondary)}
+.meta b{color:var(--text-strong);font-size:18px}
+.form{padding:32px;display:flex;flex-direction:column;gap:22px}
+.form h2{font-size:22px;font-weight:700;color:var(--text-strong)}
+.field>.caption{display:block;margin-bottom:8px}
+.input{width:100%;height:56px;border-radius:14px;border:1px solid var(--border-regular);background:#fff;padding:0 18px;font-size:18px;color:var(--text-strong);outline:none;transition:border-color 150ms var(--ease)}
+.input:focus{border-color:var(--blue-200)}
+.input::placeholder{color:var(--text-tertiary)}
+.seg{display:flex;background:var(--gray-100);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;height:48px;border-radius:10px;font-size:16px;font-weight:600;color:var(--text-secondary)}
+.seg button[aria-pressed=true]{background:#fff;color:var(--text-strong);box-shadow:0 1px 2px rgb(20 26 36/.08)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-width:64px;height:44px;padding:0 16px;border-radius:50px;box-shadow:inset 0 0 0 1px var(--border-regular);font-size:16px;font-weight:600;background:#fff}
+.chips button[aria-pressed=true]{background:var(--gray-800);color:#fff;box-shadow:none}
+.helper{font-size:14px;line-height:22px;color:var(--text-secondary)}
+
+/* 검사 화면 */
+.test{display:grid;grid-template-columns:300px 1fr;gap:20px;padding:20px 28px;height:calc(100dvh - 64px)}
+.side{display:flex;flex-direction:column;gap:4px;padding:16px;overflow:auto}
+.side .caption{padding:4px 8px 8px}
+.srow{display:block;width:100%;text-align:left;border-radius:12px;padding:12px}
+.srow[aria-current=true]{background:var(--blue-50)}
+.srow .top{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.srow .top b{font-weight:600;color:var(--text-strong)}
+.srow[aria-current=true] .top b{color:var(--primary)}
+.srow .top span{color:var(--text-secondary);font-size:14px;white-space:nowrap}
+.srow .top span.done{color:var(--pos-strong);font-weight:600}
+.mini{height:4px;border-radius:2px;background:var(--gray-100);margin-top:8px;overflow:hidden}
+.mini i{display:block;height:100%;background:var(--primary);transition:width 150ms var(--ease)}
+.side-total{margin-top:auto;padding:12px 8px 4px;border-top:1px solid var(--divider-regular);font-size:15px;color:var(--text-secondary)}
+.side-total b{color:var(--text-strong);font-size:18px}
+.qwrap{display:flex;flex-direction:column;padding:28px 36px}
+.qtop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tag{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:6px;background:var(--blue-50);color:var(--primary);font-size:14px;font-weight:600}
+.qnum{font-size:16px;color:var(--text-secondary)}.qnum b{font-size:22px;color:var(--text-strong)}
+.bar{height:6px;border-radius:3px;background:var(--gray-100);margin-top:16px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary);transition:width 150ms var(--ease)}
+.qtext{flex:1;display:flex;align-items:center;font-size:clamp(24px,2.6vw,32px);line-height:1.45;font-weight:700;color:var(--text-strong);padding:24px 0}
+.opts{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.opt{min-height:132px;border-radius:16px;box-shadow:inset 0 0 0 1px var(--border-regular);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px 8px}
+.opt .n{width:46px;height:46px;border-radius:50%;background:var(--gray-100);display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--text-secondary)}
+.opt .l{font-size:16px;line-height:22px;font-weight:600;text-align:center}
+.opt[aria-pressed=true]{background:var(--blue-50);box-shadow:inset 0 0 0 2px var(--primary)}
+.opt[aria-pressed=true] .n{background:var(--primary);color:#fff}
+.opt[aria-pressed=true] .l{color:var(--primary)}
+.qnav{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+.qnav .hint{font-size:14px;color:var(--text-tertiary)}
+
+/* 결과 화면 */
+.result{max-width:1180px;margin:0 auto;padding:24px 28px 120px}
+#report{display:flex;flex-direction:column;gap:16px;background:var(--background-regular)}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 32px}
+.hero h2{font-size:28px;line-height:38px;font-weight:700;color:var(--text-strong);margin-top:4px}
+.hero .sub{font-size:16px;color:var(--text-secondary);margin-top:4px}
+.total{text-align:right}
+.total .num{font-size:52px;line-height:1;font-weight:700;color:var(--text-strong)}
+.total .num small{font-size:20px;font-weight:500;color:var(--text-tertiary);margin-left:4px}
+.total .badge{margin-top:10px}
+.rtop{display:grid;grid-template-columns:5fr 6fr;gap:16px}
+.rcol{display:flex;flex-direction:column;gap:16px;min-width:0}
+.rcol>.card:last-child{flex:1}
+.radar{display:flex;flex-direction:column}
+.radar svg{margin:auto 0}
+.card h3.t{font-size:18px;font-weight:700;color:var(--text-strong);margin-bottom:14px}
+.radar svg{width:100%;height:auto;display:block}
+.rows{display:flex;flex-direction:column;gap:14px}
+.brow{display:grid;grid-template-columns:150px 1fr 40px 76px;align-items:center;gap:12px;font-size:15px}
+.brow .nm{font-weight:600;color:var(--text-strong)}
+.brow .v{font-weight:700;color:var(--text-strong);text-align:right;font-size:17px}
+.brow .badge{justify-self:end}
+.track{position:relative;height:12px;border-radius:6px;background:var(--gray-100);overflow:hidden}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.track i.hi{background:var(--pos)}.track i.mid{background:var(--primary)}.track i.lo{background:var(--cau)}
+.track .tk{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #fff}
+.scale{display:grid;grid-template-columns:150px 1fr 40px 76px;gap:12px;font-size:12px;color:var(--text-tertiary)}
+.scale div{position:relative;height:16px}.scale span{position:absolute;transform:translateX(-50%)}
+.overall p{font-size:17px;line-height:28px}
+.kv{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+.kv div{flex:1;min-width:200px;border-radius:12px;padding:14px 16px;background:var(--gray-50)}
+.kv b{display:block;font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px}
+.kv span{font-size:17px;font-weight:700;color:var(--text-strong)}
+.note{margin-top:14px;font-size:14px;line-height:22px;color:var(--text-secondary);padding:12px 16px;border-radius:12px;background:var(--cau-weak)}
+.note.info{background:var(--info-weak)}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.icard{display:flex;flex-direction:column;gap:10px}
+.icard header{display:flex;align-items:center;gap:10px}
+.icard h4{margin:0;font-size:18px;font-weight:700;color:var(--text-strong);flex:1}
+.icard .sc{font-size:22px;font-weight:700;color:var(--text-strong)}
+.icard .def{font-size:14px;line-height:22px;color:var(--text-secondary)}
+.icard .txt{font-size:16px;line-height:26px}
+.icard .tip{font-size:15px;line-height:24px;padding:12px 14px;border-radius:12px;background:var(--gray-50)}
+.icard .tip b{color:var(--primary);margin-right:6px}
+.foot{font-size:13px;line-height:20px;color:var(--text-tertiary);padding:4px 4px 0}
+.plate{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--divider-regular);padding:14px 28px calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:flex-end;gap:10px;z-index:6}
+.plate .btn:first-child{margin-right:auto}
+
+/* 모달·시트 */
+.modal{position:fixed;inset:0;background:var(--dimmed-regular);z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.rbox{display:flex;align-items:flex-start;gap:28px;margin:auto}
+.rside{background:#fff;border-radius:20px;padding:24px;width:300px;display:flex;flex-direction:column;gap:12px;position:sticky;top:0}
+.rside h3{font-size:20px;font-weight:700;color:var(--text-strong)}
+.rside p{font-size:15px;line-height:24px}
+.sheetwrap{align-items:flex-end;padding:0;z-index:30}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:28px 24px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-sheet)}
+.sheet h3{font-size:22px;font-weight:700;color:var(--text-strong)}
+.sheet p{font-size:15px;color:var(--text-secondary);margin-bottom:8px}
+.sheet .row{display:flex;gap:10px}.sheet .row .btn{flex:1}
+.snack{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--gray-800);color:#fff;padding:14px 20px;border-radius:12px;font-size:15px;z-index:40}
+
+/* 영수증 */
+.receipt{width:320px;background:#fff;color:#141A24;padding:26px 22px 34px;position:relative;font-size:13px;line-height:20px;filter:drop-shadow(0 2px 6px rgb(0 0 0/.18))}
+.receipt::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(-45deg,transparent 7px,#fff 0) 0 0/14px 10px repeat-x,linear-gradient(45deg,transparent 7px,#fff 0) 0 0/14px 10px repeat-x}
+.r-head{text-align:center}
+.r-head .en{font-size:12px;font-weight:700;letter-spacing:3px;color:var(--text-secondary)}
+.r-head .ko{font-size:19px;font-weight:800;margin-top:4px}
+.r-cut{border:0;border-top:1.5px dashed var(--gray-300);margin:14px 0}
+.r-kv{display:flex;justify-content:space-between;gap:8px}
+.r-kv span{color:var(--text-secondary)}.r-kv b{font-weight:600}
+.r-item{margin:8px 0}
+.r-item .r-kv b{font-weight:700}
+.r-bar{height:6px;background:var(--gray-100);margin-top:4px;border-radius:3px;overflow:hidden}
+.r-bar i{display:block;height:100%;background:var(--gray-800)}
+.r-total{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:700}
+.r-total .big{font-size:26px}
+.r-msg{font-size:13px;line-height:20px;margin-top:8px}
+.r-qr{display:block;margin:4px auto 0;width:132px;height:132px;padding:6px;background:#fff;border-radius:8px;cursor:pointer}
+.r-qr svg{width:100%;height:100%;display:block}
+.r-qrcap{text-align:center;font-size:12px;line-height:18px;color:var(--text-secondary);margin-top:8px}
+.r-foot{text-align:center;font-size:11px;line-height:16px;color:var(--text-tertiary);margin-top:12px}
+
+/* 세로·좁은 화면 */
+@media (max-width:900px){
+  .start,.rtop,.igrid{grid-template-columns:1fr}
+  .start{padding:24px 16px}
+  .test{grid-template-columns:1fr;height:auto;padding:16px}
+  .side{display:none}
+  .opts{grid-template-columns:1fr}
+  .opt{min-height:64px;flex-direction:row;justify-content:flex-start;padding:10px 16px}
+  .result{padding:16px 16px 120px}
+  .hero{flex-direction:column;align-items:flex-start}
+  .total{text-align:left}
+  .brow,.scale{grid-template-columns:96px 1fr 36px 70px;gap:8px;font-size:13px}
+  .rbox{flex-direction:column;align-items:center}
+  .plate{padding:12px 16px}
+  .plate .btn{padding:0 14px;font-size:15px}
+}
+
+/* 가로 태블릿(갤럭시 탭 S10 FE+ 13.1형 ≈ 1440×900) — 손가락 터치 기준으로 키움 */
+@media (min-width:1100px) and (orientation:landscape){
+  .btn{height:64px;font-size:20px;border-radius:16px}
+  .btn-md{height:54px;padding:0 26px;font-size:17px;border-radius:14px}
+  .appbar{padding:0 36px}
+  .appbar h1{font-size:20px}.appbar .who{font-size:17px}
+
+  .start{max-width:1360px;gap:56px;padding:28px 48px}
+  .eyebrow{font-size:18px}
+  .intro h1{font-size:56px;line-height:68px}
+  .lead{font-size:22px;line-height:34px;margin:18px 0 28px}
+  .domlist{gap:10px}
+  .domlist li{padding:16px 20px;font-size:18px;border-radius:14px}
+  .meta{font-size:18px;margin-top:22px}.meta b{font-size:22px}
+  .form{padding:40px;gap:26px}
+  .form h2{font-size:26px}
+  .form .caption{font-size:15px}
+  .input{height:64px;font-size:21px;border-radius:16px}
+  .seg button{height:56px;font-size:18px}
+  .chips{gap:10px}
+  .chips{flex-wrap:nowrap}
+  .chips button{flex:1;max-width:120px;min-width:0;padding:0;height:54px;font-size:18px}
+  .helper{font-size:16px;line-height:24px}
+
+  .test{grid-template-columns:340px 1fr;gap:24px;padding:24px 36px}
+  .side{padding:18px}
+  .srow{padding:14px}
+  .srow .top{font-size:17px}.srow .top span{font-size:15px}
+  .mini{height:6px;border-radius:3px}
+  .side-total{font-size:17px}.side-total b{font-size:21px}
+  .qwrap{padding:36px 48px}
+  .tag{height:38px;padding:0 16px;font-size:17px;border-radius:8px}
+  .qnum{font-size:18px}.qnum b{font-size:30px}
+  .bar{height:8px;border-radius:4px;margin-top:20px}
+  .qtext{font-size:clamp(32px,3.2vw,46px);line-height:1.4}
+  .opts{gap:16px}
+  .opt{min-height:clamp(150px,22vh,210px);gap:16px;border-radius:20px}
+  .opt .n{width:60px;height:60px;font-size:26px}
+  .opt .l{font-size:19px;line-height:26px}
+  .qnav{margin-top:26px}.qnav .hint{font-size:16px}
+
+  .result{max-width:1400px;padding:20px 36px 130px}
+  .hero{padding:24px 28px}
+  .brow,.scale{grid-template-columns:170px 1fr 44px 86px}
+  .brow{font-size:17px}.brow .v{font-size:19px}
+  .badge{height:28px;font-size:14px}
+  .kv span{font-size:18px}
+  .icard .def{font-size:15px;line-height:23px}
+  .icard .txt{font-size:17px;line-height:27px}
+  .icard .tip{font-size:16px;line-height:25px}
+  .plate{padding:14px 36px}
+
+  .sheetwrap{align-items:center;padding:24px}
+  .sheet{border-radius:24px;padding:32px 28px 24px}
+  .receipt{width:340px}
+  .rside{width:340px;padding:28px}
+  .rside p{font-size:16px;line-height:25px}
+}
+
+/* 인쇄: 영수증이 열려 있으면 영수증만 */
+@media print{
+  @page{margin:6mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
+  .plate,.appbar,.snack,.sheetwrap{display:none!important}
+  body.rcpt-open #app{display:none!important}
+  body.rcpt-open #rcpt{position:static;background:none;padding:0;display:block}
+  body.rcpt-open .rside{display:none}
+  .receipt{width:72mm;filter:none;margin:0 auto;padding:4mm 3mm}
+  .receipt::after{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="appbar">
+    <div class="mark" aria-hidden="true">DL</div>
+    <h1>디지털 리터러시 진단</h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <!-- 1. 시작 -->
+  <section id="start" class="screen">
+    <div class="start">
+      <div class="intro">
+        <p class="eyebrow">7개 영역 자기진단</p>
+        <h1>디지털 리터러시 진단</h1>
+        <p class="lead">디지털 세상에서 정보를 찾고, 만들고, 나누고, 지키는 힘을 7개 영역 38문항으로 살펴봐요.</p>
+        <ul class="domlist" id="domlist"></ul>
+        <p class="meta"><b>38</b>문항 · 약 <b>10</b>분 · 5점 척도</p>
+      </div>
+      <div class="card form">
+        <h2>기본 정보</h2>
+        <label class="field"><span class="caption">이름</span>
+          <input class="input" id="name" maxlength="20" autocomplete="off" placeholder="이름을 입력해 주세요"></label>
+        <div class="field"><span class="caption">학교급</span>
+          <div class="seg" id="school" role="group" aria-label="학교급"></div></div>
+        <div class="field"><span class="caption">학년</span>
+          <div class="chips" id="grades" role="group" aria-label="학년"></div></div>
+        <button class="btn btn-primary press" id="startBtn" disabled>진단 시작하기</button>
+        <p class="helper">정답이 없는 검사예요. 평소 내 모습과 가장 가까운 답을 골라 주세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 검사 -->
+  <section id="test" class="screen" hidden>
+    <div class="test">
+      <aside class="side card">
+        <p class="caption">영역별 진행</p>
+        <div id="sideList"></div>
+        <div class="side-total">전체 <b id="doneN">0</b> / 38 문항</div>
+      </aside>
+      <div class="qwrap card">
+        <div class="qtop"><span class="tag" id="qDom"></span><span class="qnum"><b id="qNo">1</b> / 38</span></div>
+        <div class="bar"><i id="qBar"></i></div>
+        <p class="qtext" id="qText" aria-live="polite"></p>
+        <div class="opts" id="opts" role="group" aria-label="응답"></div>
+        <div class="qnav">
+          <button class="btn btn-md btn-outline press" id="prevBtn">이전</button>
+          <span class="hint">답을 고르면 다음 문항으로 넘어가요</span>
+          <button class="btn btn-md btn-primary press" id="nextBtn">다음</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 결과 -->
+  <section id="result" class="screen" hidden>
+    <div class="result"><div id="report"></div></div>
+    <div class="plate">
+      <button class="btn btn-md btn-outline press" id="homeBtn">처음으로</button>
+      <button class="btn btn-md btn-secondary press" id="saveBtn">결과 저장</button>
+      <button class="btn btn-md btn-primary press" id="printBtn">결과 인쇄</button>
+    </div>
+  </section>
+</div>
+
+<!-- 영수증 -->
+<div id="rcpt" class="modal" hidden>
+  <div class="rbox">
+    <div class="receipt" id="receipt"></div>
+    <div class="rside">
+      <h3>결과 영수증</h3>
+      <p>QR 코드를 누르면 진단 결과지를 PDF 또는 PNG로 저장할 수 있어요. 휴대폰으로 스캔해도 결과지가 열려요.</p>
+      <button class="btn btn-primary press" id="doPrint">인쇄하기</button>
+      <button class="btn btn-outline press" id="rcptClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 저장 시트 -->
+<div id="save" class="modal sheetwrap" hidden>
+  <div class="sheet" role="dialog" aria-label="결과지 저장">
+    <h3>결과지 저장</h3>
+    <p>저장할 파일 형식을 골라 주세요.</p>
+    <div class="row">
+      <button class="btn btn-primary press" id="pdfBtn">PDF로 저장</button>
+      <button class="btn btn-secondary press" id="pngBtn">PNG로 저장</button>
+    </div>
+    <button class="btn btn-outline press" id="saveClose">닫기</button>
+  </div>
+</div>
+<!-- 프린터 설정(교사용): 왼쪽 위 DL 로고를 1초 길게 누르면 열림 -->
+<div id="setup" class="modal sheetwrap" hidden>
+  <div class="sheet" role="dialog" aria-label="프린터 설정">
+    <h3>프린터 설정</h3>
+    <p id="setupStat">연결 상태를 확인하고 있어요…</p>
+    <div class="row">
+      <button class="btn btn-primary press" id="testPrint">테스트 인쇄</button>
+      <button class="btn btn-secondary press" id="setupRetry">다시 확인</button>
+    </div>
+    <button class="btn btn-outline press" id="setupClose">닫기</button>
+  </div>
+</div>
+<div class="snack" id="snack" hidden></div>
+
+<script>
+/* 문항·해석: 이승민·강두봉(2021). 초등학생을 위한 디지털 리터러시 검사 도구 개발 및 검증. 한국정보교육학회논문지 25(1), 59-69. */
+const D=[
+{name:'디지털 사회 인식 및 문제해결',short:'사회인식·문제해결',
+ def:'디지털 사회에 관심을 갖고 변화를 알아차리며, 일상생활에 필요한 문제를 디지털 도구로 해결하는 능력이에요.',
+ items:['새로 나오는 디지털 기술에 대해 관심을 갖는다.','디지털 도구를 활용하여 일상생활에서 필요한 문제를 해결할 수 있다.','내가 관심 있는 분야에서 디지털 기술이 어떻게 활용되고 있는지 알 수 있다.','나는 디지털 기술의 변화를 민감하게 여기고 있다.','나는 디지털 기술로 인해 변화하는 세상에 잘 적응하는 편이다.','나는 디지털 기술이 발달하면서 직업이 어떻게 변화하는지 알고 있다.','나는 디지털 기술이 발달하면서 생활 모습이 어떻게 변화하는지 알고 있다.','디지털 기술을 활용했을 때, 정보가 퍼지는 속도와 영향력을 알고 있다.','디지털 기기가 문제가 생겼을 때, 간단한 조치 방법을 알고 있다.'],
+ hi:'새로운 디지털 기술에 관심이 많고, 기술이 생활과 직업을 어떻게 바꾸는지 잘 이해하고 있어요. 생활 속 문제도 디지털 도구로 스스로 해결하려는 힘이 있어요.',
+ mid:'디지털 기술의 변화를 어느 정도 알고 있지만, 내 생활의 문제를 디지털 도구로 해결해 보는 경험은 더 쌓을 수 있어요.',
+ lo:'디지털 기술의 변화와 그 영향에 관심을 가질 기회가 아직 적었을 수 있어요. 기기에 문제가 생겼을 때 해결하는 방법부터 하나씩 익혀 보세요.',
+ tip:'새로운 기술 소식을 한 가지 골라 가족이나 친구와 이야기해 보고, 기기가 멈췄을 때 다시 시작하기·연결 확인하기 같은 기본 조치를 익혀 두세요.'},
+{name:'정보 접근',short:'정보 접근',
+ def:'디지털 기기로 인터넷에 접속하고, 필요한 정보를 검색해 얻는 능력이에요.',
+ items:['디지털 환경에서 데이터, 정보, 콘텐츠를 검색할 수 있다.','디지털 기기를 이용하여 인터넷에 접속할 수 있다.','데이터, 정보, 콘텐츠를 검색하기 위해 인터넷을 이용할 수 있다.','나는 유용한 앱(소프트웨어)을 찾거나 다운로드할 수 있다.'],
+ hi:'인터넷에 접속해 원하는 정보와 앱을 스스로 찾을 수 있어요. 디지털 학습의 기초가 탄탄해요.',
+ mid:'기본적인 검색은 할 수 있지만, 원하는 정보를 빠르고 정확하게 찾는 방법은 더 익힐 수 있어요.',
+ lo:'인터넷 접속이나 검색이 아직 익숙하지 않을 수 있어요. 선생님이나 보호자와 함께 검색어를 정해 찾아보는 연습이 도움이 돼요.',
+ tip:'검색할 때는 핵심 낱말 2~3개를 골라 입력하고, 여러 결과를 비교해 보세요.'},
+{name:'콘텐츠 창작',short:'콘텐츠 창작',
+ def:'문서·표·그래프·발표 자료를 만들고 사진·영상을 편집하며, 기존 자료를 활용해 새로운 콘텐츠와 간단한 프로그램을 만드는 능력이에요.',
+ items:['나는 필요한 문서를 작성하기 위해 디지털 도구를 사용할 수 있다.','나는 표나 그래프 등의 자료를 활용하여 문서를 작성할 수 있다.','나는 숫자 데이터를 관리하기 위한 도구를 사용할 수 있다.','나는 프레젠테이션을 위한 디지털 도구를 사용할 수 있다.','나는 사진, 그림, 동영상을 편집하는 디지털 도구를 사용할 수 있다.','이미 있던 정보와 콘텐츠를 수정하고 개선하여 새로운 콘텐츠를 생성할 수 있다.','제작하고자 하는 콘텐츠를 위해 기존 데이터, 정보, 콘텐츠를 활용할 수 있다.','엔트리, 스크래치 등을 이용하여 간단한 프로그램을 만들 수 있다.'],
+ hi:'여러 디지털 도구로 문서, 발표 자료, 영상을 만들 수 있어요. 기존 자료를 고쳐 새로운 결과물을 만들고, 간단한 프로그래밍도 할 수 있어요.',
+ mid:'기본적인 문서는 만들 수 있지만, 표·그래프, 영상 편집, 프로그래밍처럼 다양한 도구를 다뤄 보는 경험은 더 넓힐 수 있어요.',
+ lo:'디지털 도구로 결과물을 만들어 본 경험이 아직 적을 수 있어요. 간단한 문서나 발표 자료부터 직접 만들어 보세요.',
+ tip:'수업 과제를 발표 자료나 짧은 영상으로 만들어 보고, 엔트리·스크래치로 작은 프로그램에 도전해 보세요.'},
+{name:'공유',short:'공유',
+ def:'SNS를 포함한 온라인 공간에서 사실과 의견을 알맞은 방법으로 나누는 능력이에요.',
+ items:['나는 뉴스, 블로그, SNS 등에서 다른 사람들이 올린 글에 댓글을 남길 수 있다.','내 느낌을 표현하기 위해 글, 사진, 동영상 등을 인터넷에 올릴 수 있다.','주어진 상황에 적합한 디지털 수단으로 다른 사람과 정보를 공유할 수 있다.','적절한 디지털 도구를 사용하여 데이터, 정보, 디지털 콘텐츠를 공유할 수 있다.','사실로 확인되지 않은 정보나 글은 온라인을 통해 다른 사람에게 전달하지 않는다.','디지털 환경에서 여러 개의 계정을 생성하고 관리할 수 있다.'],
+ hi:'상황에 맞는 디지털 수단으로 정보와 생각을 나눌 수 있고, 확인되지 않은 정보는 퍼뜨리지 않으려고 해요.',
+ mid:'온라인에서 정보를 나눌 수 있지만, 상황에 맞는 공유 방법을 고르고 정보가 사실인지 확인하는 습관은 더 키울 수 있어요.',
+ lo:'온라인에서 정보나 생각을 나눠 본 경험이 아직 적을 수 있어요. 학급 게시판처럼 안전한 공간에서 먼저 연습해 보세요.',
+ tip:'글이나 사진을 올리기 전에 “사실인가요? 다른 사람에게 상처가 되지 않나요?”를 한 번 더 확인해 보세요.'},
+{name:'협업',short:'협업',
+ def:'디지털 환경에서 다른 사람과 상호작용하며, 지역사회와 국제사회의 활동에 참여하는 능력이에요.',
+ items:['디지털 기술 및 서비스를 통해 지역사회의 활동에 참여할 수 있다.','디지털 기술을 통해 국제사회의 활동에 참여할 수 있다.','디지털 기술을 활용하여 협업 활동을 할 수 있다.','디지털 환경에서 상호작용하기 위한 규칙에 대해 알고 있다.'],
+ hi:'디지털 도구로 친구들과 함께 활동하고, 온라인 규칙을 지키며 더 넓은 공동체 활동에도 참여할 수 있어요.',
+ mid:'친구와의 온라인 협업은 할 수 있지만, 지역사회나 국제사회 활동으로 참여 범위를 넓혀 보는 경험이 더 필요해요.',
+ lo:'디지털 도구로 다른 사람과 함께 일해 본 경험이 아직 적을 수 있어요. 모둠 활동에서 공유 문서를 함께 써 보는 것부터 시작해 보세요.',
+ tip:'공유 문서나 온라인 게시판으로 모둠 과제를 해 보고, 모둠 친구들과 온라인 대화 규칙을 함께 정해 보세요.'},
+{name:'정보보호 및 윤리',short:'정보보호·윤리',
+ def:'개인정보와 정보보안의 중요성을 알고, 저작권을 지키며 사이버폭력을 예방하는 윤리의식이에요.',
+ items:['디지털 환경에서 개인정보보호와 정보보안의 중요성을 알고 있다.','디지털 자료를 다른 사람의 허락 없이 함부로 사용하지 않는다.','나는 다른 사람의 사진, 이미지, 글을 사용할 때 그 출처를 밝힌다.','디지털 기술 및 서비스를 사용하면서 발생할 수 있는 위험(사이버폭력)을 예방할 수 있다.'],
+ hi:'개인정보를 소중히 다루고, 다른 사람의 자료를 쓸 때 허락과 출처를 챙겨요. 사이버폭력을 예방하는 태도도 갖추고 있어요.',
+ mid:'정보보호와 저작권의 중요성은 알고 있지만, 출처 밝히기나 위험 예방을 실제로 실천하는 습관은 더 다질 수 있어요.',
+ lo:'개인정보, 저작권, 사이버폭력에 대해 더 알아볼 필요가 있어요. 비밀번호와 개인정보를 다른 사람에게 알려주지 않는 습관부터 지켜 보세요.',
+ tip:'다른 사람의 사진이나 글을 쓸 때는 출처를 적고, 불편한 메시지를 받으면 선생님이나 보호자에게 바로 알리세요.'},
+{name:'디지털 메타인지',short:'메타인지',
+ def:'앞의 여섯 영역과 관련해 자신의 디지털 활용을 돌아보며 전략적이고 비판적으로 생각하는 능력이에요.',
+ items:['데이터, 정보, 콘텐츠를 검색하는 나만의 방법(전략)이 있다.','데이터, 정보, 콘텐츠가 믿을 만한 것인지 확인한 후 사용할 수 있다.','나는 스스로 디지털 도구의 활용 시간을 조절할 수 있다.'],
+ hi:'나만의 검색 전략이 있고, 정보가 믿을 만한지 따져 본 뒤 사용해요. 디지털 기기 사용 시간도 스스로 조절할 수 있어요.',
+ mid:'정보의 신뢰성을 따져 보려고 하지만, 나만의 전략을 세우고 사용 시간을 스스로 조절하는 힘은 더 키울 수 있어요.',
+ lo:'정보를 비판적으로 살펴보거나 내 디지털 사용 습관을 돌아볼 기회가 적었을 수 있어요. 하루 사용 시간을 기록해 보는 것부터 시작해 보세요.',
+ tip:'정보를 볼 때 “누가, 언제, 왜 만들었나요?”를 확인하고, 하루 사용 시간 목표를 정해 지켜 보세요.'}
+];
+const Q=D.flatMap((d,di)=>d.items.map(t=>({di,t})));
+console.assert(Q.length===38&&D.map(d=>d.items.length).join()==='9,4,8,6,4,4,3','문항 구성 오류');
+const LIKERT=['전혀 그렇지 않아요','그렇지 않아요','보통이에요','그래요','매우 그래요'];
+const SCHOOL={E:{label:'초등학교',short:'초',max:6},M:{label:'중학교',short:'중',max:3},H:{label:'고등학교',short:'고',max:3}};
+const LV={hi:'높음',mid:'보통',lo:'노력 필요'};
+// shortcut: 원 논문은 규준 점수를 제시하지 않아 5점 척도 평균 4.0/3.0을 경계로 씀, 학교 규준이 생기면 교체
+const level=m=>m>=4?'hi':m>=3?'mid':'lo';
+
+let st={name:'',school:'E',grade:0,ans:Array(38).fill(0),cur:0,date:new Date()};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r1=x=>Math.round(x*10)/10;
+const ymd=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+const dateKo=d=>`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+const gradeKo=()=>`${SCHOOL[st.school].label} ${st.grade}학년`;
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!==id);scrollTo(0,0);
+  $('#who').innerHTML=id==='start'?'':`<b>${esc(st.name)}</b> · ${gradeKo()}`;}
+let snackT;function toast(m){const s=$('#snack');s.textContent=m;s.hidden=false;clearTimeout(snackT);snackT=setTimeout(()=>s.hidden=true,2400);}
+
+/* 시작 화면 */
+$('#domlist').innerHTML=D.map(d=>`<li><b>${d.name}</b><span>${d.items.length}문항</span></li>`).join('');
+$('#school').innerHTML=Object.entries(SCHOOL).map(([k,v])=>`<button class="press" data-s="${k}" aria-pressed="${k===st.school}">${v.label}</button>`).join('');
+function renderGrades(){$('#grades').innerHTML=Array.from({length:SCHOOL[st.school].max},(_,i)=>`<button class="press" data-g="${i+1}" aria-pressed="${st.grade===i+1}">${i+1}학년</button>`).join('');checkStart();}
+function checkStart(){$('#startBtn').disabled=!($('#name').value.trim()&&st.grade);}
+$('#school').onclick=e=>{const b=e.target.closest('button');if(!b)return;st.school=b.dataset.s;st.grade=0;
+  $('#school').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderGrades();};
+$('#grades').onclick=e=>{const b=e.target.closest('button');if(!b)return;st.grade=+b.dataset.g;
+  $('#grades').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));checkStart();};
+$('#name').oninput=checkStart;
+$('#name').onkeydown=e=>{if(e.key==='Enter'&&!$('#startBtn').disabled)$('#startBtn').click();};
+$('#startBtn').onclick=()=>{st.name=$('#name').value.trim();st.ans=Array(38).fill(0);st.cur=0;st.date=new Date();renderQ();show('test');};
+renderGrades();
+
+/* 검사 화면 */
+$('#opts').innerHTML=LIKERT.map((l,i)=>`<button class="opt press" data-v="${i+1}"><span class="n">${i+1}</span><span class="l">${l}</span></button>`).join('');
+function renderQ(){
+  const q=Q[st.cur],done=st.ans.filter(Boolean).length;
+  $('#qDom').textContent=D[q.di].name;$('#qNo').textContent=st.cur+1;$('#qText').textContent=q.t;
+  $('#qBar').style.width=done/38*100+'%';$('#doneN').textContent=done;
+  $('#opts').querySelectorAll('.opt').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===st.ans[st.cur]));
+  $('#prevBtn').disabled=st.cur===0;
+  const last=st.cur===37;$('#nextBtn').textContent=last?'결과 보기':'다음';$('#nextBtn').disabled=!st.ans[st.cur];
+  $('#sideList').innerHTML=D.map((d,i)=>{const idx=Q.map((x,k)=>x.di===i?k:-1).filter(k=>k>=0),n=idx.filter(k=>st.ans[k]).length;
+    return `<button class="srow press" data-d="${i}" aria-current="${q.di===i}"><div class="top"><b>${d.name}</b><span class="${n===idx.length?'done':''}">${n} / ${idx.length}</span></div><div class="mini"><i style="width:${n/idx.length*100}%"></i></div></button>`}).join('');
+}
+function go(i){st.cur=Math.max(0,Math.min(37,i));renderQ();}
+function next(){if(st.cur<37)return go(st.cur+1);const miss=st.ans.indexOf(0);if(miss>=0){toast('아직 답하지 않은 문항이 있어요');return go(miss);}showResult();}
+let advT;
+$('#opts').onclick=e=>{const b=e.target.closest('.opt');if(!b)return;st.ans[st.cur]=+b.dataset.v;renderQ();
+  clearTimeout(advT);if(st.cur<37)advT=setTimeout(()=>go(st.cur+1),220);};
+$('#prevBtn').onclick=()=>go(st.cur-1);
+$('#nextBtn').onclick=next;
+$('#sideList').onclick=e=>{const b=e.target.closest('.srow');if(!b)return;const idx=Q.map((x,k)=>x.di===+b.dataset.d?k:-1).filter(k=>k>=0);
+  go(idx.find(k=>!st.ans[k])??idx[0]);};
+addEventListener('keydown',e=>{if($('#test').hidden)return;
+  if(/^[1-5]$/.test(e.key))$('#opts').querySelector(`[data-v="${e.key}"]`).click();
+  else if(e.key==='ArrowLeft')go(st.cur-1);else if(e.key==='ArrowRight'&&st.ans[st.cur])next();});
+
+/* 결과 계산 */
+function calc(){
+  const dom=D.map((_,i)=>{const v=Q.map((q,k)=>q.di===i?st.ans[k]:0).filter(Boolean);return r1(v.reduce((a,b)=>a+b,0)/v.length);});
+  const total=r1(st.ans.reduce((a,b)=>a+b,0)/38),mx=Math.max(...dom),mn=Math.min(...dom);
+  return {dom,total,top:D.filter((_,i)=>dom[i]===mx).map(d=>d.short),low:D.filter((_,i)=>dom[i]===mn).map(d=>d.short),flat:mx===mn};
+}
+const OVERALL={
+  hi:'디지털 리터러시가 전반적으로 높은 편이에요. 강점 영역을 살려 모둠 활동에서 친구들을 돕는 역할을 맡아 보고, 상대적으로 낮은 영역도 함께 챙겨 보세요.',
+  mid:'디지털 리터러시가 보통 수준이에요. 상대적으로 낮은 영역을 중심으로 직접 해 보는 경험을 늘리면 여러 영역이 고르게 자랄 수 있어요.',
+  lo:'디지털 리터러시를 키울 기회가 더 필요해요. 정보 접근과 정보보호처럼 기초가 되는 영역부터 선생님, 보호자와 함께 차근차근 익혀 보세요.'};
+
+function radar(vals){
+  const W=560,H=440,cx=280,cy=222,R=150,n=vals.length,a=i=>(-90+i*360/n)*Math.PI/180,
+    pt=(i,r)=>[cx+r*Math.cos(a(i)),cy+r*Math.sin(a(i))].map(v=>v.toFixed(1)),poly=r=>vals.map((_,i)=>pt(i,r).join(',')).join(' ');
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable, Malgun Gothic, sans-serif" role="img" aria-label="영역별 점수 방사형 그래프">`;
+  for(let l=5;l>=1;l--)s+=`<polygon points="${poly(R*l/5)}" fill="${l===5?'#F9F9FB':'none'}" stroke="${l===3||l===4?'#CBD1DC':'#E5E8EF'}" stroke-width="1" ${l===3||l===4?'stroke-dasharray="4 4"':''}/>`;
+  vals.forEach((_,i)=>{const[x,y]=pt(i,R);s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#E5E8EF"/>`;});
+  [1,2,3,4,5].forEach(l=>s+=`<text x="${cx+4}" y="${cy-R*l/5+12}" font-size="11" fill="#99A1B1">${l}</text>`);
+  s+=`<polygon points="${vals.map((v,i)=>pt(i,R*v/5).join(',')).join(' ')}" fill="rgba(0,120,255,.16)" stroke="#0078FF" stroke-width="2.5" stroke-linejoin="round"/>`;
+  vals.forEach((v,i)=>{const[x,y]=pt(i,R*v/5);s+=`<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="#0078FF" stroke-width="2.5"/>`;});
+  vals.forEach((v,i)=>{let[x,y]=pt(i,R+18).map(Number);const c=Math.cos(a(i)),anc=c>.2?'start':c<-.2?'end':'middle';
+    if(Math.sin(a(i))<-.9)y-=18;else if(Math.sin(a(i))>.3)y+=8;
+    s+=`<text x="${x}" y="${y}" text-anchor="${anc}" font-size="14" font-weight="600" fill="#354153">${D[i].short}<tspan x="${x}" dy="19" font-size="15" font-weight="700" fill="#0078FF">${v.toFixed(1)}</tspan></text>`;});
+  return s+'</svg>';
+}
+
+function showResult(){
+  const r=calc(),lv=level(r.total);
+  history.replaceState(null,'','#'+toHash());
+  const rows=D.map((d,i)=>{const v=r.dom[i],l=level(v);return `<div class="brow"><span class="nm">${d.short}</span><div class="track"><i class="${l}" style="width:${v/5*100}%"></i><span class="tk" style="left:60%"></span><span class="tk" style="left:80%"></span></div><span class="v">${v.toFixed(1)}</span><span class="badge ${l}">${LV[l]}</span></div>`}).join('');
+  const cards=D.map((d,i)=>{const v=r.dom[i],l=level(v);return `<article class="card icard"><header><h4>${d.name}</h4><span class="badge ${l}">${LV[l]}</span><span class="sc">${v.toFixed(1)}</span></header><p class="def">${d.def}</p><p class="txt">${d[l]}</p><p class="tip"><b>이렇게 해 보세요</b>${d.tip}</p></article>`}).join('');
+  const metaNote=level(r.dom[6])!=='hi'?`<p class="note info">디지털 메타인지는 다른 여섯 영역을 스스로 점검하고 조절하는 힘이에요. 이 영역이 자라면 다른 영역도 함께 성장하기 쉬워요.</p>`:'';
+  const gradeNote=st.school!=='E'||st.grade<5?`<p class="note">이 검사 도구는 초등학교 5·6학년 509명을 대상으로 타당화되었어요. ${st.school==='E'?'초등 저·중학년':'중·고등학생'} 결과는 참고 자료로 해석해 주세요.</p>`:'';
+  $('#report').innerHTML=`
+  <div class="rtop"><div class="rcol">
+  <section class="card hero"><div><p class="caption">디지털 리터러시 진단 결과</p><h2>${esc(st.name)} 학생</h2><p class="sub">${gradeKo()} · 검사일 ${dateKo(st.date)}</p></div>
+    <div class="total"><p class="caption">종합 평균</p><p class="num">${r.total.toFixed(1)}<small>/ 5.0</small></p><span class="badge ${lv}">${LV[lv]}</span></div></section>
+    <section class="card radar"><h3 class="t">영역별 프로필</h3>${radar(r.dom)}</section>
+  </div><div class="rcol">
+    <section class="card"><h3 class="t">영역별 점수</h3><div class="rows">${rows}
+      <div class="scale"><span></span><div><span style="left:0">0</span><span style="left:60%">3.0</span><span style="left:80%">4.0</span><span style="left:100%">5.0</span></div></div></div>
+      <div class="kv"><div><b>강점 영역</b><span>${r.flat?'모든 영역이 고르게 나타났어요':r.top.join(', ')}</span></div><div><b>성장이 필요한 영역</b><span>${r.flat?'-':r.low.join(', ')}</span></div></div></section>
+    <section class="card overall"><h3 class="t">종합 해석</h3><p>${OVERALL[lv]}</p>${metaNote}${gradeNote}</section>
+  </div></div>
+  <div class="igrid">${cards}</div>
+  <p class="foot">해석 기준: 5점 척도 영역 평균 4.0 이상 ‘높음’, 3.0 이상 ‘보통’, 3.0 미만 ‘노력 필요’. 원 논문은 규준 점수를 제시하지 않아 척도 중간값을 기준으로 삼았어요. 문항 출처: 이승민·강두봉(2021). 초등학생을 위한 디지털 리터러시 검사 도구 개발 및 검증. 한국정보교육학회논문지, 25(1), 59-69.</p>`;
+  show('result');
+}
+
+/* 링크·QR */
+function toHash(){return new URLSearchParams({n:st.name,s:st.school,g:st.grade,d:ymd(st.date),a:st.ans.join('')}).toString();}
+function fromHash(){
+  const p=new URLSearchParams(location.hash.slice(1)),a=p.get('a')||'',s=p.get('s'),g=+p.get('g'),d=p.get('d')||'';
+  if(!/^[1-5]{38}$/.test(a)||!SCHOOL[s]||!(g>=1&&g<=SCHOOL[s].max))return false;
+  const dt=/^\d{8}$/.test(d)?new Date(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6)):new Date();
+  st={name:(p.get('n')||'').slice(0,20),school:s,grade:g,ans:[...a].map(Number),cur:0,date:dt};return true;
+}
+function receiptNo(){return ymd(st.date)+'-'+String(st.ans.reduce((s,v,i)=>s+v*(i+7)*31,0)%10000).padStart(4,'0');}
+function openReceipt(){
+  const r=calc(),lv=level(r.total),url=location.href.split('#')[0]+'#'+toHash();
+  let qr='';
+  if(window.qrcode){const q=qrcode(0,'L');q.addData(url);q.make();qr=q.createSvgTag({cellSize:4,margin:0,scalable:true});}
+  $('#receipt').innerHTML=`
+   <div class="r-head"><p class="en">DIGITAL LITERACY</p><p class="ko">디지털 리터러시 진단 결과</p></div>
+   <hr class="r-cut">
+   <div class="r-kv"><span>이름</span><b>${esc(st.name)}</b></div>
+   <div class="r-kv"><span>학년</span><b>${gradeKo()}</b></div>
+   <div class="r-kv"><span>검사일</span><b>${dateKo(st.date)}</b></div>
+   <div class="r-kv"><span>No.</span><b>${receiptNo()}</b></div>
+   <hr class="r-cut">
+   ${D.map((d,i)=>`<div class="r-item"><div class="r-kv"><span>${d.short} (${d.items.length})</span><b>${r.dom[i].toFixed(1)} · ${LV[level(r.dom[i])]}</b></div><div class="r-bar"><i style="width:${r.dom[i]/5*100}%"></i></div></div>`).join('')}
+   <hr class="r-cut">
+   <div class="r-total"><span>종합 평균</span><span><span class="big">${r.total.toFixed(1)}</span> / 5.0 · ${LV[lv]}</span></div>
+   <div class="r-kv" style="margin-top:6px"><span>강점</span><b>${r.flat?'고른 분포':r.top.join(', ')}</b></div>
+   <div class="r-kv"><span>성장 필요</span><b>${r.flat?'-':r.low.join(', ')}</b></div>
+   <p class="r-msg">${OVERALL[lv]}</p>
+   <hr class="r-cut">
+   ${qr?`<button class="r-qr" id="qrBtn" aria-label="결과지 저장">${qr}</button><p class="r-qrcap">QR을 누르거나 스캔하면<br>결과지(PDF·PNG)를 저장할 수 있어요</p>`:'<p class="r-qrcap">QR 코드를 만들려면 인터넷 연결이 필요해요</p>'}
+   <p class="r-foot">7개 영역 38문항 · 5점 척도<br>이승민·강두봉(2021) 검사 도구 기반</p>`;
+  if(qr)$('#qrBtn').onclick=()=>$('#save').hidden=false;
+  $('#rcpt').hidden=false;document.body.classList.add('rcpt-open');
+}
+function closeReceipt(){$('#rcpt').hidden=true;document.body.classList.remove('rcpt-open');}
+
+/* 저장 */
+async function capture(){
+  return html2canvas($('#report'),{scale:2,backgroundColor:'#F2F3F8',windowWidth:1280,
+    onclone:doc=>{const el=doc.getElementById('report');el.style.width='1180px';el.style.padding='24px';}});
+}
+const fname=ext=>`디지털리터러시_${st.name.replace(/[\\/:*?"<>|]/g,'')}_${ymd(st.date)}.${ext}`;
+async function save(kind,btn){
+  if(!window.html2canvas||(kind==='pdf'&&!window.jspdf)){toast('저장 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요');return;}
+  const label=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';
+  try{
+    const c=await capture();
+    if(kind==='png'){const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=fname('png');a.click();}
+    else{const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),m=8,mw=210-2*m,mh=297-2*m,k=Math.min(mw/c.width,mh/c.height),w=c.width*k,h=c.height*k;
+      pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',(210-w)/2,m,w,h);pdf.save(fname('pdf'));}
+    toast('결과지를 저장했어요');$('#save').hidden=true;
+  }catch(err){console.error(err);toast('저장하지 못했어요. 다시 시도해 주세요');}
+  finally{btn.disabled=false;btn.textContent=label;}
+}
+$('#pdfBtn').onclick=e=>save('pdf',e.currentTarget);
+$('#pngBtn').onclick=e=>save('png',e.currentTarget);
+$('#saveClose').onclick=()=>$('#save').hidden=true;
+$('#save').onclick=e=>{if(e.target.id==='save')$('#save').hidden=true;};
+$('#saveBtn').onclick=()=>$('#save').hidden=false;
+/* 영수증 프린터: ESC/POS, 80mm 용지 = 인쇄폭 72mm·576dot·48칸(한글은 2칸).
+   태블릿의 RawBT 앱이 블루투스/Wi-Fi로 프린터에 전달함. RawBT가 없으면(PC 등) 브라우저 인쇄로 대체 */
+const COLS=48,DOTS=576,RAWBT=['ws://localhost:40213/','ws://127.0.0.1:40213/'];
+let euc; // 문자→EUC-KR 2바이트 표. 브라우저 내장 디코더를 거꾸로 돌려 첫 인쇄 때 한 번 만듦
+function eucTable(){
+  if(euc)return euc;
+  const m=new Map(),td=new TextDecoder('euc-kr'),b=new Uint8Array(2);
+  for(let h=0x81;h<=0xFE;h++)for(let l=0x41;l<=0xFE;l++){b[0]=h;b[1]=l;const c=td.decode(b);if(c.length===1&&c!=='�'&&!m.has(c))m.set(c,h<<8|l);}
+  return euc=m;
+}
+const sw=s=>[...s].reduce((n,c)=>n+(c.charCodeAt(0)<128?1:2),0);
+const lr=(l,r)=>l+' '.repeat(Math.max(1,COLS-sw(l)-sw(r)))+r;
+function wrap(s){const out=[];let line='',n=0;
+  for(const w of s.split(' ')){const k=sw(w);if(n&&n+1+k>COLS){out.push(line);line='';n=0;}if(n){line+=' ';n++;}line+=w;n+=k;}
+  if(line)out.push(line);return out;}
+function receiptBytes(test){
+  const o=[],t=eucTable(),cmd=(...b)=>o.push(...b),
+    T=s=>{for(const c of s+'\n'){const k=c.charCodeAt(0),v=t.get(c);k<128?o.push(k):v?o.push(v>>8,v&255):o.push(63,63);}},
+    rule=()=>T('-'.repeat(COLS)),align=n=>cmd(0x1B,0x61,n),size=n=>cmd(0x1D,0x21,n),bold=n=>cmd(0x1B,0x45,n);
+  cmd(0x1B,0x40);
+  if(test){
+    align(1);size(0x11);T('프린터 테스트');size(0);T('');
+    T('한글이 바르게 보이면 연결 완료');T('용지 80mm · 한 줄 48칸');align(0);
+    T('123456789012345678901234567890123456789012345678');T('가나다라마바사아자차카타파하가나다라마바사아자차');
+  }else{
+    const r=calc(),lv=level(r.total);
+    align(1);bold(1);size(0x11);T('디지털 리터러시');size(0);T('진단 결과');bold(0);align(0);
+    rule();T(lr('이름',st.name));T(lr('학년',gradeKo()));T(lr('검사일',dateKo(st.date)));T(lr('No.',receiptNo()));rule();
+    D.forEach((d,i)=>{const v=r.dom[i],n=Math.round(v);T(lr(`${d.short} (${d.items.length})`,`${'■'.repeat(n)}${'□'.repeat(5-n)} ${v.toFixed(1)} ${LV[level(v)]}`));});
+    rule();bold(1);size(0x01);T(lr('종합 평균',`${r.total.toFixed(1)} / 5.0  ${LV[lv]}`));size(0);bold(0);
+    T(lr('강점',r.flat?'고른 분포':r.top.join(', ')));T(lr('성장 필요',r.flat?'-':r.low.join(', ')));T('');
+    wrap(OVERALL[lv]).forEach(T);rule();
+    if(window.qrcode){ // QR은 모든 ESC/POS 프린터가 지원하는 래스터 이미지(GS v 0)로 보냄
+      const q=qrcode(0,'L');q.addData(location.href.split('#')[0]+'#'+toHash());q.make();
+      const n=q.getModuleCount(),s=Math.max(3,Math.min(8,Math.floor(336/n))),w=n*s,off=DOTS-w>>1,bw=Math.ceil((off+w)/8);
+      T('');cmd(0x1D,0x76,0x30,0,bw&255,bw>>8,w&255,w>>8);
+      for(let y=0;y<w;y++){const row=new Uint8Array(bw),qy=y/s|0;
+        for(let x=0;x<w;x++)if(q.isDark(qy,x/s|0)){const p=off+x;row[p>>3]|=0x80>>(p&7);}
+        o.push(...row);}
+      align(1);T('');T('QR을 스캔하면 결과지(PDF, PNG)를');T('저장할 수 있어요');
+    }
+    align(1);T('');T('7개 영역 38문항 · 5점 척도');T('이승민·강두봉(2021) 검사 도구 기반');
+  }
+  cmd(0x1B,0x64,4,0x1D,0x56,0x42,0); // 4줄 올리고 자름
+  return new Uint8Array(o);
+}
+function wsOpen(addr){return new Promise((ok,no)=>{let ws;try{ws=new WebSocket(addr);}catch(e){return no(e);}
+  ws.binaryType='arraybuffer';const t=setTimeout(()=>{ws.close();no(new Error('timeout'));},700);
+  ws.onopen=()=>{clearTimeout(t);ok(ws);};ws.onerror=()=>{clearTimeout(t);no(new Error('ws'));};});}
+async function rawbtSocket(){for(const a of RAWBT)try{return await wsOpen(a);}catch(e){}return null;}
+const onTablet=()=>/Android/i.test(navigator.userAgent)||!!window.fully;
+let printing=false;
+async function printReceipt(test){
+  if(printing)return;printing=true;setTimeout(()=>printing=false,2500);
+  let bytes;try{bytes=receiptBytes(test);}catch(e){console.error(e);}
+  const ws=bytes&&await rawbtSocket();
+  if(ws){ws.send(bytes.buffer);setTimeout(()=>ws.close(1000),500);toast(test?'테스트 인쇄를 보냈어요':'영수증을 인쇄하고 있어요');}
+  else if(bytes&&onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);location.href='rawbt:base64,'+btoa(s);} // 서버 앱이 꺼져 있으면 RawBT 앱을 직접 호출
+  else if(test)toast('RawBT 서버를 찾지 못했어요');
+  else print();
+}
+$('#printBtn').onclick=()=>{openReceipt();printReceipt();};
+$('#doPrint').onclick=()=>printReceipt();
+
+/* 프린터 설정 시트 */
+async function setupCheck(){const s=$('#setupStat');s.textContent='연결 상태를 확인하고 있어요…';
+  const ws=await rawbtSocket();if(ws)ws.close();
+  s.textContent=ws?'RawBT 서버와 연결됐어요. 테스트 인쇄로 한글과 용지 폭을 확인해 보세요.'
+    :onTablet()?'RawBT 서버를 찾지 못했어요. ‘Server for RawBT’ 앱이 켜져 있는지 확인해 주세요. 꺼져 있어도 RawBT 앱을 직접 불러 인쇄를 시도해요.'
+    :'이 기기에서는 RawBT를 쓸 수 없어 브라우저 인쇄 창으로 인쇄해요.';}
+let holdT;const mark=$('.mark');
+mark.onpointerdown=()=>{holdT=setTimeout(()=>{$('#setup').hidden=false;setupCheck();},1000);};
+mark.onpointerup=mark.onpointerleave=mark.onpointercancel=()=>clearTimeout(holdT);
+mark.oncontextmenu=e=>e.preventDefault();
+$('#setupRetry').onclick=setupCheck;
+$('#testPrint').onclick=()=>printReceipt(true);
+$('#setupClose').onclick=()=>$('#setup').hidden=true;
+$('#setup').onclick=e=>{if(e.target.id==='setup')$('#setup').hidden=true;};
+$('#rcptClose').onclick=closeReceipt;
+$('#rcpt').onclick=e=>{if(e.target.id==='rcpt')closeReceipt();};
+$('#homeBtn').onclick=()=>{history.replaceState(null,'',location.pathname);st.grade=0;$('#name').value='';
+  $('#school').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.s===st.school));renderGrades();show('start');};
+
+/* QR로 열린 경우: 결과를 바로 보여 주고 저장 시트를 띄움 */
+if(fromHash()){showResult();$('#save').hidden=false;}
+</script>
+</body>
+</html>
