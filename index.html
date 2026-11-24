@@ -474,7 +474,7 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!
 let snackT;function toast(m){const s=$('#snack');s.textContent=m;s.hidden=false;clearTimeout(snackT);snackT=setTimeout(()=>s.hidden=true,2400);}
 
 /* 시작 화면 */
-const VERSION='11.24-3 · 영수증 QR 방식 선택'; // 고칠 때마다 올림
+const VERSION='11.24-4 · 앱 직접 호출 인쇄 보완'; // 고칠 때마다 올림
 $('#ver').textContent=VERSION;
 $('#domlist').innerHTML=D.map(d=>`<li><b>${d.name}</b><span>${d.items.length}문항</span></li>`).join('');
 $('#school').innerHTML=Object.entries(SCHOOL).map(([k,v])=>`<button class="press" data-s="${k}" aria-pressed="${k===st.school}">${v.label}</button>`).join('');
@@ -636,7 +636,7 @@ const lr=(l,r)=>l+' '.repeat(Math.max(1,COLS-sw(l)-sw(r)))+r;
 function wrap(s){const out=[];let line='',n=0;
   for(const w of s.split(' ')){const k=sw(w);if(n&&n+1+k>COLS){out.push(line);line='';n=0;}if(n){line+=' ';n++;}line+=w;n+=k;}
   if(line)out.push(line);return out;}
-function receiptBytes(test){
+function receiptBytes(test,qr){
   const o=[],t=eucTable(),cmd=(...b)=>o.push(...b),
     T=s=>{for(const c of s+'\n'){const k=c.charCodeAt(0),v=t.get(c);k<128?o.push(k):v?o.push(v>>8,v&255):o.push(63,63);}},
     rule=()=>T('-'.repeat(COLS)),align=n=>cmd(0x1B,0x61,n),size=n=>cmd(0x1D,0x21,n),bold=n=>cmd(0x1B,0x45,n);
@@ -653,7 +653,7 @@ function receiptBytes(test){
     rule();bold(1);size(0x01);T(lr('종합 평균',`${r.total.toFixed(1)} / 5.0  ${LV[lv]}`));size(0);bold(0);
     T(lr('강점',r.flat?'고른 분포':r.top.join(', ')));T(lr('성장 필요',r.flat?'-':r.low.join(', ')));T('');
     wrap(OVERALL[lv]).forEach(T);rule();
-    const mode=qrMode(),url=location.href.split('#')[0]+'#'+toHash();
+    const mode=qr||qrMode(),url=location.href.split('#')[0]+'#'+toHash();
     if(mode==='native'){ // 프린터 내장 QR 명령(GS ( k) — 데이터가 작음. 지원하지 않는 프린터도 있음
       const d=[...url].map(c=>c.charCodeAt(0)&255),len=d.length+3,k=(...b)=>cmd(0x1D,0x28,0x6B,...b);
       align(1);T('');k(4,0,0x31,0x41,0x32,0);k(3,0,0x31,0x43,6);k(3,0,0x31,0x45,0x30);
@@ -684,13 +684,16 @@ let printing=false;
 async function printReceipt(test){
   if(printing)return;printing=true;
   try{
-    const bytes=receiptBytes(test),ws=await rawbtSocket();
+    const ws=await rawbtSocket();
+    // 서버 앱 없이 RawBT 앱을 직접 부를 때는 주소 길이 제한 때문에 큰 QR 이미지가 통째로 버려짐 → 내장 QR(1KB대)로 바꿔 보냄
+    const bytes=receiptBytes(test,!ws&&qrMode()==='img'?'native':'');
     if(ws){ // 큰 데이터(QR 이미지)가 다 넘어간 뒤 닫아야 RawBT가 끝까지 받음
       ws.send(bytes.buffer);const t0=Date.now();
       while(ws.bufferedAmount>0&&Date.now()-t0<8000)await sleep(50);
       toast(`${test?'테스트 인쇄':'영수증'}을 보냈어요 (${(bytes.length/1024).toFixed(1)}KB)`);
       await sleep(1500);ws.close(1000);
-    }else if(onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);location.href='rawbt:base64,'+btoa(s);} // 서버 앱이 꺼져 있으면 RawBT 앱을 직접 호출
+    }else if(onTablet()){let s='';for(const b of bytes)s+=String.fromCharCode(b);
+      toast(`서버 미연결 — RawBT 앱으로 직접 보내요 (${(bytes.length/1024).toFixed(1)}KB)`);location.href='rawbt:base64,'+btoa(s);}
     else if(test)toast('RawBT 서버를 찾지 못했어요');
     else print();
   }catch(e){console.error(e);toast('인쇄 오류: '+(e&&e.message||e));}
@@ -703,7 +706,7 @@ $('#doPrint').onclick=()=>printReceipt();
 async function setupCheck(){const s=$('#setupStat');s.textContent='연결 상태를 확인하고 있어요…';
   const ws=await rawbtSocket();if(ws)ws.close();
   s.textContent=ws?'RawBT 서버와 연결됐어요. 테스트 인쇄로 한글과 용지 폭을 확인해 보세요.'
-    :onTablet()?'RawBT 서버를 찾지 못했어요. ‘Server for RawBT’ 앱이 켜져 있는지 확인해 주세요. 꺼져 있어도 RawBT 앱을 직접 불러 인쇄를 시도해요.'
+    :onTablet()?'RawBT 서버 미연결 — RawBT 앱을 직접 불러 인쇄해요(QR은 프린터 내장 방식으로 자동 전환). 서버로 연결하려면 ‘Server for RawBT’ 앱을 켜고 Fully Kiosk의 Mixed Content를 Always Allow로 바꿔 주세요.'
     :'이 기기에서는 RawBT를 쓸 수 없어 브라우저 인쇄 창으로 인쇄해요.';}
 let holdT;const mark=$('.mark');
 mark.onpointerdown=()=>{holdT=setTimeout(()=>{$('#setup').hidden=false;setupCheck();},1000);};
