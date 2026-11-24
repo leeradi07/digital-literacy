@@ -73,6 +73,7 @@ h1,h2,h3,p{margin:0}
 .domlist li span{color:var(--text-secondary);white-space:nowrap}
 .meta{margin-top:18px;font-size:15px;color:var(--text-secondary)}
 .meta b{color:var(--text-strong);font-size:18px}
+.ver{margin-top:10px;font-size:14px;color:var(--text-tertiary)}.ver b{font-weight:600;color:var(--text-secondary)}
 .form{padding:32px;display:flex;flex-direction:column;gap:22px}
 .form h2{font-size:22px;font-weight:700;color:var(--text-strong)}
 .field>.caption{display:block;margin-bottom:8px}
@@ -308,6 +309,7 @@ h1,h2,h3,p{margin:0}
         <p class="lead">디지털 세상에서 정보를 찾고, 만들고, 나누고, 지키는 힘을 7개 영역 38문항으로 살펴봐요.</p>
         <ul class="domlist" id="domlist"></ul>
         <p class="meta"><b>38</b>문항 · 약 <b>10</b>분 · 5점 척도</p>
+        <p class="ver">버전 <b id="ver"></b></p><!-- 한시적: 태블릿에서 새 버전 확인용, 안정되면 지울 것 -->
       </div>
       <div class="card form">
         <h2>기본 정보</h2>
@@ -472,6 +474,8 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!
 let snackT;function toast(m){const s=$('#snack');s.textContent=m;s.hidden=false;clearTimeout(snackT);snackT=setTimeout(()=>s.hidden=true,2400);}
 
 /* 시작 화면 */
+const VERSION='11.24-3 · 영수증 QR 방식 선택'; // 고칠 때마다 올림
+$('#ver').textContent=VERSION;
 $('#domlist').innerHTML=D.map(d=>`<li><b>${d.name}</b><span>${d.items.length}문항</span></li>`).join('');
 $('#school').innerHTML=Object.entries(SCHOOL).map(([k,v])=>`<button class="press" data-s="${k}" aria-pressed="${k===st.school}">${v.label}</button>`).join('');
 function renderGrades(){$('#grades').innerHTML=Array.from({length:SCHOOL[st.school].max},(_,i)=>`<button class="press" data-g="${i+1}" aria-pressed="${st.grade===i+1}">${i+1}학년</button>`).join('');checkStart();}
